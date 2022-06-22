@@ -1,20 +1,20 @@
 package com.example.quiz
 
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
-import android.widget.Button
-import android.widget.ImageView
-import android.widget.ProgressBar
-import android.widget.TextView
+import android.widget.*
 import androidx.core.content.ContextCompat
 
 class QuizQuestions : AppCompatActivity(), View.OnClickListener {
     private var mCurrentPosition:Int = 1;
     private var mQuestionsList: ArrayList<Question>? = null;
     private var mSelectedOptionPosition: Int = 0;
+    private var correctAnswers: Int = 0;
+    private var userName: String? = null;
     var questionView : TextView? = null;
     var questionImg : ImageView? = null;
     var progressBars : ProgressBar? = null;
@@ -35,22 +35,28 @@ class QuizQuestions : AppCompatActivity(), View.OnClickListener {
         optionTwo = findViewById(R.id.option_two);
         optionThree = findViewById(R.id.option_three);
         optionFour = findViewById(R.id.option_four);
-        btnSubmit = findViewById(R.id.btn_submit);
+        btnSubmit = findViewById(R.id.btn_submitted);
 
+        userName = intent.getStringExtra(Constants.USER_NAME);
+        //
+        mQuestionsList = Constants.getQuestions();
+        setQuestion()
         optionOne?.setOnClickListener(this)
         optionTwo?.setOnClickListener(this)
         optionThree?.setOnClickListener(this)
         optionFour?.setOnClickListener(this)
-
-        //
-        mQuestionsList = Constants.getQuestions();
-        setQuestion()
-        defaultOptionsView();
-
+        btnSubmit?.setOnClickListener(this)
     }
 
     private fun setQuestion() {
-        var currentQuestion = mQuestionsList!![mCurrentPosition];
+
+        var currentQuestion = mQuestionsList!![mCurrentPosition-1];
+        defaultOptionsView();
+        if (mCurrentPosition == mQuestionsList!!.size) {
+            btnSubmit?.text = "FINISH"
+        } else {
+            btnSubmit?.text = "SUBMIT"
+        }
         questionView?.text = currentQuestion.question;
         progressBars?.progress = mCurrentPosition;
         progressTxt?.text = "$mCurrentPosition/${progressBars?.max}"
@@ -83,6 +89,7 @@ class QuizQuestions : AppCompatActivity(), View.OnClickListener {
     }
    private fun setSelectedOption(view: TextView?, option: Int) {
        defaultOptionsView();
+       mSelectedOptionPosition = option
        view?.setTextColor(Color.parseColor("#363A43"));
        view?.setTypeface(view.typeface, Typeface.BOLD);
        view?.background = ContextCompat.getDrawable(this, R.drawable.selected_option_border_bg);
@@ -105,10 +112,65 @@ class QuizQuestions : AppCompatActivity(), View.OnClickListener {
                 }
             }
             R.id.option_four -> {
-            optionFour.let {
-                setSelectedOption(it, 4)
+                optionFour.let {
+                    setSelectedOption(it, 4)
+                }
+            }
+            R.id.btn_submitted -> {
+                if(btnSubmit?.text == "FINISH") {
+                    val intent = Intent(this,Result::class.java);
+                    intent.putExtra(Constants.USER_NAME, userName);
+                    intent.putExtra(Constants.TOTAL_QUESTIONS, mQuestionsList?.size);
+                    intent.putExtra(Constants.CORRECT_ANSWER, correctAnswers)
+                    startActivity(intent);
+                    finish();
+                }
+                if(mSelectedOptionPosition == 0) {
+                    mCurrentPosition++;
+                    when {
+                       mCurrentPosition <= mQuestionsList!!.size -> {
+                           setQuestion();
+                       }
+                        else -> {
+                           Toast.makeText(this, "Congrats You made it", Toast.LENGTH_LONG).show();
+                       }
+                    }
+                } else {
+                    var question = mQuestionsList?.get(mCurrentPosition - 1);
+                    if(question!!.answer != mSelectedOptionPosition) {
+                        answerView(mSelectedOptionPosition, R.drawable.incorrect_option_border_bg)
+                    } else {
+                        correctAnswers++
+                    }
+                    answerView(question.answer, R.drawable.correct_option_border_bg)
+
+                    if(mCurrentPosition == mQuestionsList!!.size) {
+                        btnSubmit?.text = "FINISH"
+                    } else {
+                        btnSubmit?.text = "GO TO NEXT QUESTION"
+                    }
+                    mSelectedOptionPosition = 0;
+                }
+
+
             }
         }
-        }
+    }
+
+    private fun answerView(answer: Int, drawableView: Int) {
+         when(answer) {
+             1 -> {
+                optionOne?.background = ContextCompat.getDrawable(this@QuizQuestions, drawableView)
+             }
+             2 -> {
+                 optionTwo?.background = ContextCompat.getDrawable(this@QuizQuestions, drawableView)
+             }
+             3 -> {
+              optionThree?.background = ContextCompat.getDrawable(this@QuizQuestions, drawableView)
+             }
+             4 -> {
+             optionFour?.background = ContextCompat.getDrawable(this@QuizQuestions, drawableView)
+            }
+         }
     }
 }
